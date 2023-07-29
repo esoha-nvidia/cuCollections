@@ -52,6 +52,16 @@ static_map<Key, Value, Scope, Allocator>::static_map(std::size_t capacity,
 }
 
 template <typename Key, typename Value, cuda::thread_scope Scope, typename Allocator>
+void static_map<Key, Value, Scope, Allocator>::clear(cudaStream_t stream) {
+  auto constexpr block_size = 256;
+  auto constexpr stride     = 4;
+  auto const grid_size      = (capacity_ + stride * block_size - 1) / (stride * block_size);
+  detail::initialize<block_size, atomic_key_type, atomic_mapped_type>
+    <<<grid_size, block_size, 0, stream>>>(
+      slots_, empty_key_sentinel_, empty_value_sentinel_, capacity_);
+}
+
+template <typename Key, typename Value, cuda::thread_scope Scope, typename Allocator>
 static_map<Key, Value, Scope, Allocator>::static_map(std::size_t capacity,
                                                      empty_key<Key> empty_key_sentinel,
                                                      empty_value<Value> empty_value_sentinel,
