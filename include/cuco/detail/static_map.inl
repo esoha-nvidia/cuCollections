@@ -81,6 +81,16 @@ static_map<Key, Value, Scope, Allocator>::static_map(std::size_t capacity,
 }
 
 template <typename Key, typename Value, cuda::thread_scope Scope, typename Allocator>
+void static_map<Key, Value, Scope, Allocator>::clear(cudaStream_t stream) {
+  auto constexpr block_size = 256;
+  auto constexpr stride     = 4;
+  auto const grid_size      = (capacity_ + stride * block_size - 1) / (stride * block_size);
+  detail::initialize<block_size, atomic_key_type, atomic_mapped_type>
+    <<<grid_size, block_size, 0, stream>>>(
+      slots_, empty_key_sentinel_, empty_value_sentinel_, capacity_);
+}
+
+template <typename Key, typename Value, cuda::thread_scope Scope, typename Allocator>
 static_map<Key, Value, Scope, Allocator>::~static_map()
 {
   std::allocator_traits<slot_allocator_type>::deallocate(slot_allocator_, slots_, capacity_);
@@ -148,7 +158,6 @@ void static_map<Key, Value, Scope, Allocator>::insert_if(InputIt first,
     first, num_keys, num_successes_, view, stencil, pred, hash, key_equal);
   CUCO_CUDA_TRY(cudaMemcpyAsync(
     &h_num_successes, num_successes_, sizeof(atomic_ctr_type), cudaMemcpyDeviceToHost, stream));
-  CUCO_CUDA_TRY(cudaStreamSynchronize(stream));
 
   size_ += h_num_successes;
 }

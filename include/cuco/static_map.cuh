@@ -601,10 +601,10 @@ class static_map {
 #endif
 
   static_map(static_map const&) = delete;
-  static_map(static_map&&)      = delete;
+  static_map(static_map&&)      = default;
 
   static_map& operator=(static_map const&) = delete;
-  static_map& operator=(static_map&&) = delete;
+  static_map& operator=(static_map&&) = default;
 
   /**
    * @brief Indicates if concurrent insert/find is supported for the key/value types.
@@ -665,6 +665,8 @@ class static_map {
              erased_key<Key> erased_key_sentinel,
              Allocator const& alloc = Allocator{},
              cudaStream_t stream    = 0);
+
+  void clear(cudaStream_t stream    = 0);
 
   /**
    * @brief Destroys the map and frees its contents.
